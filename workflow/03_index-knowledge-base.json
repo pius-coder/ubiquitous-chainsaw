@@ -1,0 +1,130 @@
+{
+  "name": "03 - Index Knowledge Base",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "n-manual",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, title, content, category FROM knowledge_base WHERE embedding IS NULL AND is_active = true;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [450, 300],
+      "id": "n-get-unindexed",
+      "name": "Get Unindexed KB",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300],
+      "id": "n-split",
+      "name": "Loop Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text_to_embed",
+              "name": "text_to_embed",
+              "value": "={{ $json.title }}: {{ $json.content }}",
+              "type": "string"
+            },
+            {
+              "id": "kb_id",
+              "name": "kb_id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 300],
+      "id": "n-prepare-text",
+      "name": "Prepare Text"
+    },
+    {
+      "parameters": {
+        "model": "mistral-embed",
+        "text": "={{ $json.text_to_embed }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "id": "n-embeddings",
+      "name": "Generate Embedding",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE knowledge_base SET embedding = '{{ JSON.stringify($json.embedding) }}'::vector, indexed_at = NOW() WHERE id = {{ $('Prepare Text').item.json.kb_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1250, 300],
+      "id": "n-update-kb",
+      "name": "Update KB Embedding",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1450, 300],
+      "id": "n-done",
+      "name": "Done"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Get Unindexed KB", "type": "main", "index": 0 }]]
+    },
+    "Get Unindexed KB": {
+      "main": [[{ "node": "Loop Items", "type": "main", "index": 0 }]]
+    },
+    "Loop Items": {
+      "main": [
+        [{ "node": "Prepare Text", "type": "main", "index": 0 }],
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Text": {
+      "main": [[{ "node": "Generate Embedding", "type": "main", "index": 0 }]]
+    },
+    "Generate Embedding": {
+      "main": [[{ "node": "Update KB Embedding", "type": "main", "index": 0 }]]
+    },
+    "Update KB Embedding": {
+      "main": [[{ "node": "Loop Items", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": true }
+}

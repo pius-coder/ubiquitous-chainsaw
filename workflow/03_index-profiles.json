@@ -1,0 +1,118 @@
+{
+  "name": "03 - Index Profiles",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "n-manual",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, code, name, first_name, age, gender, city, neighborhood, profession, description_short, hobbies, search_age_min, search_age_max, search_city FROM profiles WHERE embedding IS NULL AND status = 'active';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [450, 300],
+      "id": "n-get-profiles",
+      "name": "Get Unindexed Profiles",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300],
+      "id": "n-split",
+      "name": "Loop Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $input.first().json;\n\nconst text = [\n  `${p.name || p.first_name}, ${p.gender} de ${p.age} ans`,\n  `Habite à ${p.city}${p.neighborhood ? ', ' + p.neighborhood : ''}`,\n  p.profession ? `Profession: ${p.profession}` : '',\n  p.description_short ? p.description_short : '',\n  p.hobbies ? `Loisirs: ${p.hobbies}` : '',\n  p.search_age_min ? `Cherche ${p.search_age_min}-${p.search_age_max} ans` : '',\n  p.search_city ? `Préfère ${p.search_city}` : ''\n].filter(x => x).join('. ');\n\nreturn [{ json: { text_to_embed: text, profile_id: p.id, profile_code: p.code } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "id": "n-prepare-text",
+      "name": "Build Profile Text"
+    },
+    {
+      "parameters": {
+        "model": "mistral-embed",
+        "text": "={{ $json.text_to_embed }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "id": "n-embeddings",
+      "name": "Generate Embedding",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE profiles SET embedding = '{{ JSON.stringify($json.embedding) }}'::vector, search_text = '{{ $('Build Profile Text').item.json.text_to_embed.replace(/'/g, \"''\") }}', indexed_at = NOW() WHERE id = {{ $('Build Profile Text').item.json.profile_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1250, 300],
+      "id": "n-update-profile",
+      "name": "Update Profile Embedding",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1450, 300],
+      "id": "n-done",
+      "name": "Done"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [{ "node": "Get Unindexed Profiles", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Unindexed Profiles": {
+      "main": [[{ "node": "Loop Items", "type": "main", "index": 0 }]]
+    },
+    "Loop Items": {
+      "main": [
+        [{ "node": "Build Profile Text", "type": "main", "index": 0 }],
+        [{ "node": "Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Profile Text": {
+      "main": [[{ "node": "Generate Embedding", "type": "main", "index": 0 }]]
+    },
+    "Generate Embedding": {
+      "main": [
+        [{ "node": "Update Profile Embedding", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Profile Embedding": {
+      "main": [[{ "node": "Loop Items", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": true }
+}

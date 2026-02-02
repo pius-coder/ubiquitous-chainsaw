@@ -9,8 +9,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
       "typeVersion": 1,
-      "position": [-2704, 304],
-      "id": "593a5398-31da-46dc-a2bb-180aa802e90c",
+      "position": [-4400, -800],
+      "id": "913387e9-f218-40c1-b57c-387d7eaa6bee",
       "name": "Mistral Sentiment LLM",
       "credentials": {
         "mistralCloudApi": {
@@ -23,19 +23,35 @@
       "parameters": {},
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.4,
-      "position": [-2768, 80],
-      "id": "dc527355-72d7-4d8f-b681-c086d18fe0ef",
+      "position": [-4144, -800],
+      "id": "ed051d91-fe44-483a-9990-cc76ccd7c680",
       "name": "Sentiment Analyst Agent"
     },
     {
       "parameters": {
-        "jsCode": "const context = $node[\"15 - Préparer Contexte Complet1\"].json;\nconst leadContext = $node[\"9 - Préparer Contexte Lead1\"].json;\nconst message = leadContext?.user_message || '';\nconst sentimentNode = $node[\"Sentiment Analyst Agent\"];\nconst sentimentRaw = sentimentNode?.json?.text || '{}';\n\ntry {\n  const cleanJson = sentimentRaw.replace(/```json\\n?|\\n?```/g, '').trim();\n  const analysis = JSON.parse(cleanJson);\n  return [{\n    json: {\n      ...context,\n      user_message: message,\n      analysis\n    }\n  }];\n} catch (e) {\n  console.error('Error parsing sentiment JSON:', e.message);\n  return [{\n    json: {\n      ...context,\n      user_message: message,\n      analysis: {\n        sentiment: 'neutre',\n        urgency: 'basse',\n        decision: 'repondre_vite',\n        ton_suggeré: 'professionnel'\n      }\n    }\n  }];\n}"
+        "jsCode": "const context = $('15 - Préparer Contexte Complet1').first().json;\nconst message = $('9 - Préparer Contexte Lead1').first().json.user_message;\nconst sentimentRaw = $('Sentiment Analyst Agent').first().json.text;\ntry {\n  const analysis = JSON.parse(sentimentRaw.replace(/```json\\n?|\\n?```/g, ''));\n  return [{\n    json: {\n      ...context,\n      user_message: message,\n      analysis\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      ...context,\n      user_message: message,\n      analysis: { sentiment: 'neutre', urgency: 'basse', decision: 'repondre_vite', ton_suggeré: 'professionnel' }\n    }\n  }];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-2416, 80],
-      "id": "7ee92ebc-3078-443a-9cb5-2eb979e10e12",
+      "position": [-3904, -608],
+      "id": "9df8d185-e510-4337-bb24-446d25a4013d",
       "name": "Merge Context & Sentiment"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [-3408, 512],
+      "id": "57d92db9-0017-4848-aed0-fe020697bcf0",
+      "name": "Mistral Cloud Embeddings",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
     },
     {
       "parameters": {
@@ -43,9 +59,23 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
       "typeVersion": 1,
-      "position": [-1936, 304],
-      "id": "bc0cc193-04d5-4316-8f2e-78ec67a97a9f",
+      "position": [-3296, 112],
+      "id": "59f30801-e838-4c61-8274-623bf6ca0a76",
       "name": "Tool - Recherche Documentation"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePostgres",
+      "typeVersion": 1,
+      "position": [-3152, 400],
+      "id": "af4ebcfb-11ae-4ded-bf2a-4f15c5fdd5ba",
+      "name": "Postgres Vector Store",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
     },
     {
       "parameters": {
@@ -53,9 +83,23 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
       "typeVersion": 1,
-      "position": [-1648, 304],
-      "id": "0612dcf5-38a1-4fa5-a7de-bd84250be1cf",
+      "position": [-3296, -96],
+      "id": "453b54ed-ed64-4ea2-be66-d99a1e5b3227",
       "name": "Tool - Recherche Profils Compatibles"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePostgres",
+      "typeVersion": 1,
+      "position": [-3152, 208],
+      "id": "b8180e1e-76dd-4b06-95f8-502897841986",
+      "name": "Postgres Vector Store Profiles",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
     },
     {
       "parameters": {
@@ -65,8 +109,8 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-6128, 368],
-      "id": "c1ea471d-14e7-4660-93a2-3103f200ca4b",
+      "position": [-7488, -64],
+      "id": "75d7e55e-2c20-4740-87e9-1f4a1221d2c9",
       "name": "1 - Webhook WhatsApp1",
       "webhookId": "whatsapp-conversations-v3"
     },
@@ -140,8 +184,8 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-5904, 368],
-      "id": "c8f2fd26-4fba-4d64-a2e6-01e17011a1dd",
+      "position": [-7264, -64],
+      "id": "64dc4f47-c9ac-4964-bd67-fcb9c6272469",
       "name": "2 - Extract Data1"
     },
     {
@@ -178,16 +222,16 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-5680, 368],
-      "id": "b6518339-d104-45e1-af8f-98024bdab435",
+      "position": [-7040, -64],
+      "id": "702176e2-d546-4548-b8ef-69b6207e3d6c",
       "name": "3 - Message entrant valide ?1"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-5456, 464],
-      "id": "487fe3da-7e19-4964-ba4b-cb581e01c609",
+      "position": [-6816, 48],
+      "id": "af9a7fbf-5495-4444-9de8-3ffd42c11192",
       "name": "FIN - Message ignoré1"
     },
     {
@@ -198,8 +242,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-5456, 272],
-      "id": "8630fb77-6db7-4afb-bf73-ab6b60b60381",
+      "position": [-6816, -160],
+      "id": "a0aeb157-8a1e-4b1e-8c77-7d1a22df010b",
       "name": "4 - Get Admin Phone1",
       "credentials": {
         "postgres": {
@@ -233,16 +277,16 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-5232, 272],
-      "id": "2782cc37-ae84-4079-867d-2aad45a6d63f",
+      "position": [-6592, -160],
+      "id": "7f27ee92-1499-45c4-950b-5816775c51ad",
       "name": "5 - Pas l'admin ?1"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-5008, 368],
-      "id": "4d9c3344-d45f-499e-808c-564ace5c0413",
+      "position": [-6368, -64],
+      "id": "dcc6fef0-fe42-4124-b66e-cea7ca8b11da",
       "name": "FIN - Message admin (ignoré)1"
     },
     {
@@ -253,8 +297,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-5008, 176],
-      "id": "4aae6672-0aa2-42fc-ab24-6741fcc54127",
+      "position": [-6368, -256],
+      "id": "96b14cf2-6e7a-420e-8582-5fcfd52ef977",
       "name": "6 - Get Lead by Phone1",
       "alwaysOutputData": true,
       "credentials": {
@@ -289,8 +333,8 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-4784, 176],
-      "id": "e56a1690-b502-45bd-95d3-e1d4a1225a0b",
+      "position": [-6144, -256],
+      "id": "3b2377c3-3c2b-43f6-89ca-ec896e5a327b",
       "name": "7 - Lead existe ?1"
     },
     {
@@ -301,8 +345,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-4560, 240],
-      "id": "fbceaa70-bf81-4e9c-9788-9e6cafd15470",
+      "position": [-5920, -176],
+      "id": "507d9248-687e-406f-aad2-3d7729206c48",
       "name": "8 - Créer Lead Anonyme1",
       "credentials": {
         "postgres": {
@@ -387,8 +431,8 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-4336, 176],
-      "id": "4cc17eb7-8361-41e1-bbac-f616657e504d",
+      "position": [-5696, -256],
+      "id": "3d7379f3-182e-41c8-99cc-1c05db6ab8c8",
       "name": "9 - Préparer Contexte Lead1"
     },
     {
@@ -399,8 +443,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-4112, 176],
-      "id": "91cec1c0-47b4-402e-9404-a46635d6c6f2",
+      "position": [-5472, -256],
+      "id": "eb12afc2-c692-4d05-9cd4-1e3e7c8be929",
       "name": "10 - Log Message IN1",
       "credentials": {
         "postgres": {
@@ -417,8 +461,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-3888, 176],
-      "id": "7a810b1a-b610-4081-bf96-35ae22894a79",
+      "position": [-5248, -256],
+      "id": "c3e75bab-942a-4027-b57f-1a6e6bad1e2e",
       "name": "11 - Get Conversation Status1",
       "alwaysOutputData": true,
       "credentials": {
@@ -453,16 +497,16 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-3664, 176],
-      "id": "efcf00df-4f5b-4110-8ca9-01b32f6edefe",
+      "position": [-5024, -256],
+      "id": "1ee5df42-1cd3-47d7-9498-a607e737586d",
       "name": "12 - Bot peut répondre ?1"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [-3440, 272],
-      "id": "40133535-1f2a-4833-aa56-c2309fd6cdfe",
+      "position": [-4800, -160],
+      "id": "47943e0d-90a8-4ca5-bbfc-5aba876df039",
       "name": "FIN - Attente humain1"
     },
     {
@@ -473,8 +517,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-3440, 80],
-      "id": "22ef2f46-dc77-4ba1-bf8a-42eeb9868898",
+      "position": [-4800, -352],
+      "id": "74a78511-f835-4fc0-a6c2-4e79195ab760",
       "name": "13 - Get Conversation History1",
       "credentials": {
         "postgres": {
@@ -491,8 +535,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-3216, 80],
-      "id": "7f6efb72-5e11-49ea-ac73-f2b2316b2e42",
+      "position": [-4576, -352],
+      "id": "b6957ecd-b686-44d5-bffb-ce62a3e6500e",
       "name": "14 - Get Active Profiles1",
       "credentials": {
         "postgres": {
@@ -508,7 +552,7 @@
             {
               "id": "full_context",
               "name": "full_context",
-              "value": "=MESSAGE DU CLIENT:\n\"{{ $node[\"9 - Préparer Contexte Lead1\"].json.user_message }}\"\n\n---\n\nINFORMATIONS CLIENT:\n- ID: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_id }}\n- Nom: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_name }}\n- Téléphone: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_phone }}\n- Ville: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_city }}\n- Âge: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_age || 'Non renseigné' }}\n- Genre: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_gender }}\n- Statut: {{ $node[\"9 - Préparer Contexte Lead1\"].json.lead_status }}\n- Nouveau client: {{ $node[\"9 - Préparer Contexte Lead1\"].json.is_new_lead ? 'Oui' : 'Non' }}\n- Message transféré: {{ $node[\"9 - Préparer Contexte Lead1\"].json.is_forwarded ? 'Oui' : 'Non' }}\n\n---\n\nPROFILS DISPONIBLES (20 derniers):\n{{ $node[\"14 - Get Active Profiles1\"].all().map(p => `- ${p.json.code}: ${p.json.name}, ${p.json.age} ans, ${p.json.gender}, ${p.json.city}, ${p.json.profession || 'N/A'}`).join('\\n') || 'Aucun profil disponible' }}",
+              "value": "=MESSAGE DU CLIENT:\n\"{{ $('9 - Préparer Contexte Lead1').item.json.user_message }}\"\n\n---\n\nINFORMATIONS CLIENT:\n- ID: {{ $('9 - Préparer Contexte Lead1').item.json.lead_id }}\n- Nom: {{ $('9 - Préparer Contexte Lead1').item.json.lead_name }}\n- Téléphone: {{ $('9 - Préparer Contexte Lead1').item.json.lead_phone }}\n- Ville: {{ $('9 - Préparer Contexte Lead1').item.json.lead_city }}\n- Âge: {{ $('9 - Préparer Contexte Lead1').item.json.lead_age || 'Non renseigné' }}\n- Genre: {{ $('9 - Préparer Contexte Lead1').item.json.lead_gender }}\n- Statut: {{ $('9 - Préparer Contexte Lead1').item.json.lead_status }}\n- Nouveau client: {{ $('9 - Préparer Contexte Lead1').item.json.is_new_lead ? 'Oui' : 'Non' }}\n- Message transféré: {{ $('9 - Préparer Contexte Lead1').item.json.is_forwarded ? 'Oui' : 'Non' }}\n\n---\n\nHISTORIQUE DE CONVERSATION (15 derniers messages):\n{{ $('13 - Get Conversation History1').all().reverse().map(m => `[${m.json.direction === 'in' ? 'CLIENT' : 'ASSISTANT'}]: ${m.json.content}`).join('\\n') || 'Aucun historique (première interaction)' }}\n\n---\n\nPROFILS DISPONIBLES (20 derniers):\n{{ $('14 - Get Active Profiles1').all().map(p => `- ${p.json.code}: ${p.json.name}, ${p.json.age} ans, ${p.json.gender}, ${p.json.city}, ${p.json.profession || 'N/A'}`).join('\\n') || 'Aucun profil disponible' }}",
               "type": "string"
             }
           ]
@@ -517,8 +561,8 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-2992, 80],
-      "id": "7bffdf49-5eb0-447d-8872-ff9f1940a182",
+      "position": [-4352, -352],
+      "id": "ee77bbe7-372c-4cad-99c2-730d21f47aec",
       "name": "15 - Préparer Contexte Complet1"
     },
     {
@@ -530,8 +574,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
       "typeVersion": 1,
-      "position": [-2192, 304],
-      "id": "0863f310-443a-479f-9922-93d747800f07",
+      "position": [-4304, -96],
+      "id": "ea0a61a8-6eba-400d-92e6-98429962500a",
       "name": "Mistral Cloud Chat Model1",
       "credentials": {
         "mistralCloudApi": {
@@ -574,8 +618,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [-1360, 304],
-      "id": "228974e2-0e2e-47b5-9917-de651abe44f8",
+      "position": [-3952, 160],
+      "id": "30f0a932-aa69-4f55-ae99-bfab71154f9d",
       "name": "Tool - Rechercher Profil1"
     },
     {
@@ -611,8 +655,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [-1232, 304],
-      "id": "8b01b707-8138-4809-b62b-c8b4524b8011",
+      "position": [-3792, 144],
+      "id": "9e684971-ae08-4545-bbd0-82806b6acb6f",
       "name": "Tool - Escalader vers Admin1"
     },
     {
@@ -660,8 +704,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [-1104, 304],
-      "id": "75ec0697-3bde-45f6-876c-a6f57b15cd83",
+      "position": [-3680, 96],
+      "id": "bd687079-991f-4e8d-ad0b-3767a0f19c95",
       "name": "Tool - Enregistrer Consultation1"
     },
     {
@@ -675,8 +719,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [-1648, 80],
-      "id": "56fa1bee-4468-44f0-819d-68a3f769fc7e",
+      "position": [-4096, -480],
+      "id": "7f5dc765-2fa8-445a-b518-5f644bdcbc00",
       "name": "16 - AI Agent Orchestrator1"
     },
     {
@@ -701,8 +745,8 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-896, 80],
-      "id": "fc038a81-8125-4a14-ae56-889a759dc612",
+      "position": [-3536, -352],
+      "id": "c43ae299-4cbc-4146-bfac-51998da039b8",
       "name": "17 - Traiter Réponse IA1"
     },
     {
@@ -711,8 +755,8 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-672, 80],
-      "id": "b906224e-3056-4c2b-8a20-9054e6e56215",
+      "position": [-3312, -352],
+      "id": "e51cee15-f035-44f5-be99-b4ca45aa7772",
       "name": "18 - Extraire Métadonnées1"
     },
     {
@@ -723,8 +767,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [-448, 80],
-      "id": "f7392f83-ecab-4ef8-bbc4-8705e076810b",
+      "position": [-3088, -352],
+      "id": "1860b5aa-b715-4700-bdb4-f4d4ca3722b6",
       "name": "19 - Log Message OUT1",
       "credentials": {
         "postgres": {
@@ -758,8 +802,8 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-224, 80],
-      "id": "35ada4c9-4a5a-4f38-9e00-c6e661217c4f",
+      "position": [-2864, -352],
+      "id": "34c7f3bf-e306-4ed0-9a81-ddbdeb6162ff",
       "name": "20 - Mise à jour statut ?1"
     },
     {
@@ -770,8 +814,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [0, 0],
-      "id": "10f71e62-fc45-454c-88d6-fc553d904142",
+      "position": [-2640, -416],
+      "id": "55206982-cd6b-4744-94c1-0e9a9dbeb03f",
       "name": "21 - Update Status Escalade1",
       "credentials": {
         "postgres": {
@@ -790,8 +834,8 @@
       },
       "type": "n8n-nodes-evolution-api-en.evolutionApi",
       "typeVersion": 1,
-      "position": [224, 80],
-      "id": "a7bce392-5249-4cf5-8f66-56c05ebe5324",
+      "position": [-2400, -272],
+      "id": "e9e25eef-785f-4262-a3f0-a9de0c4d2ed6",
       "name": "22 - Send WhatsApp Message1",
       "credentials": {
         "evolutionApi": {
@@ -808,8 +852,8 @@
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [448, 80],
-      "id": "115dd8e8-ecfb-4ed9-a2c7-2a4077330206",
+      "position": [-2192, -352],
+      "id": "6d4e5807-5a0e-401b-9561-a5ed70a31ae4",
       "name": "23 - Update Lead Status1",
       "credentials": {
         "postgres": {
@@ -822,123 +866,9 @@
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [672, 80],
-      "id": "d749d69d-f907-41ee-ac77-717e16131754",
+      "position": [-1968, -352],
+      "id": "ccd31275-904c-4c21-a02b-965a812d1a5d",
       "name": "FIN - Message Envoyé ✅1"
-    },
-    {
-      "parameters": {
-        "sessionId": "={{ $('9 - Préparer Contexte Lead1').item.json.lead_id }}"
-      },
-      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
-      "typeVersion": 1.3,
-      "position": [-2064, 304],
-      "id": "085daa1a-6f21-46c6-bb32-f31addd51d93",
-      "name": "Postgres Chat Memory",
-      "credentials": {
-        "postgres": {
-          "id": "Gv2oFLeW3VbnJ0xx",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "tableName": "conversation_memory",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
-      "typeVersion": 1.3,
-      "position": [-2080, 512],
-      "id": "3c505801-bfcb-4ba8-8dbf-59db3526fc4d",
-      "name": "Postgres PGVector Store",
-      "credentials": {
-        "postgres": {
-          "id": "Gv2oFLeW3VbnJ0xx",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
-      "typeVersion": 1,
-      "position": [-2000, 720],
-      "id": "e577e1a4-335d-46da-9258-8a81960041d1",
-      "name": "Embeddings Mistral Cloud",
-      "credentials": {
-        "mistralCloudApi": {
-          "id": "oTAUAlLG4h6S0uVq",
-          "name": "Mistral Cloud account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
-      "typeVersion": 1,
-      "position": [-1744, 528],
-      "id": "fc0aa7c4-a28e-43d0-b35f-8c118f3ee21f",
-      "name": "Mistral Cloud Chat Model2",
-      "credentials": {
-        "mistralCloudApi": {
-          "id": "oTAUAlLG4h6S0uVq",
-          "name": "Mistral Cloud account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "tableName": "knowledge_base",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
-      "typeVersion": 1.3,
-      "position": [-1616, 672],
-      "id": "2284fb52-7f04-4831-941f-7aa1d31476c6",
-      "name": "Postgres PGVector Store1",
-      "credentials": {
-        "postgres": {
-          "id": "Gv2oFLeW3VbnJ0xx",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
-      "typeVersion": 1,
-      "position": [-1216, 544],
-      "id": "c4a46650-e9bf-4b5b-91a4-2c4b29801ba7",
-      "name": "Mistral Cloud Chat Model3",
-      "credentials": {
-        "mistralCloudApi": {
-          "id": "oTAUAlLG4h6S0uVq",
-          "name": "Mistral Cloud account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
-      "typeVersion": 1,
-      "position": [-1536, 880],
-      "id": "09d078c7-950c-44f7-8f10-04bbb2486b3f",
-      "name": "Embeddings Mistral Cloud1",
-      "credentials": {
-        "mistralCloudApi": {
-          "id": "oTAUAlLG4h6S0uVq",
-          "name": "Mistral Cloud account"
-        }
-      }
     }
   ],
   "connections": {
@@ -1328,83 +1258,6 @@
           }
         ]
       ]
-    },
-    "Postgres Chat Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "16 - AI Agent Orchestrator1",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Postgres PGVector Store": {
-      "ai_vectorStore": [
-        [
-          {
-            "node": "Tool - Recherche Documentation",
-            "type": "ai_vectorStore",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Embeddings Mistral Cloud": {
-      "ai_embedding": [
-        [
-          {
-            "node": "Postgres PGVector Store",
-            "type": "ai_embedding",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mistral Cloud Chat Model2": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Tool - Recherche Documentation",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Postgres PGVector Store1": {
-      "ai_vectorStore": [
-        [
-          {
-            "node": "Tool - Recherche Profils Compatibles",
-            "type": "ai_vectorStore",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mistral Cloud Chat Model3": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Tool - Recherche Profils Compatibles",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Embeddings Mistral Cloud1": {
-      "ai_embedding": [
-        [
-          {
-            "node": "Postgres PGVector Store1",
-            "type": "ai_embedding",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "pinData": {
@@ -1519,6 +1372,7 @@
     ]
   },
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "52f86ab16199129cc9f17f47caf79594a565b44b7f742ae7b5f8b1862d8953cd"
   }
 }

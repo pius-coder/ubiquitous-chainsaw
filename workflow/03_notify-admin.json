@@ -1,0 +1,110 @@
+{
+  "name": "03 - Notify Admin",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notify-admin",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [250, 300],
+      "id": "n-webhook",
+      "name": "Webhook Trigger",
+      "webhookId": "notify-admin-v3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT value FROM admin_config WHERE key = 'admin_phone' LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [450, 300],
+      "id": "n-get-admin",
+      "name": "Get Admin Phone",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Webhook Trigger').first().json.body;\nconst adminPhone = $input.first().json.value;\n\nconst message = `🔔 ESCALADE\\n\\n👤 Client: ${input.lead_name}\\n📱 Tél: ${input.lead_phone}\\n\\n📝 Raison: ${input.reason || 'Demande de contact'}\\n\\n💬 Dernier message:\\n\"${input.last_message || 'N/A'}\"\\n\\n⏰ ${new Date().toLocaleString('fr-FR')}`;\n\nreturn [{ json: { admin_phone: adminPhone, message, lead_id: input.lead_id } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "id": "n-build-message",
+      "name": "Build Admin Message"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "new",
+        "remoteJid": "={{ $json.admin_phone }}",
+        "messageText": "={{ $json.message }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "id": "n-send-admin",
+      "name": "Send to Admin",
+      "credentials": {
+        "evolutionApi": {
+          "id": "V1jMvwrsC7FPvBug",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE conversations SET status = 'attente_humain' WHERE lead_id = {{ $('Build Admin Message').item.json.lead_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1050, 300],
+      "id": "n-update-status",
+      "name": "Update Conv Status",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"notified\": true, \"lead_id\": {{ $('Build Admin Message').item.json.lead_id }} }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1250, 300],
+      "id": "n-respond",
+      "name": "Respond Success"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Get Admin Phone", "type": "main", "index": 0 }]]
+    },
+    "Get Admin Phone": {
+      "main": [[{ "node": "Build Admin Message", "type": "main", "index": 0 }]]
+    },
+    "Build Admin Message": {
+      "main": [[{ "node": "Send to Admin", "type": "main", "index": 0 }]]
+    },
+    "Send to Admin": {
+      "main": [[{ "node": "Update Conv Status", "type": "main", "index": 0 }]]
+    },
+    "Update Conv Status": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": true }
+}

@@ -1,0 +1,1491 @@
+{
+  "name": "01 - Main WhatsApp Bot v2 - AI Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-7936, 2992],
+      "id": "webhook-main",
+      "name": "1 - Webhook WhatsApp",
+      "webhookId": "whatsapp-v4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.body.data.key.remoteJid.replace('@s.whatsapp.net', '') }}",
+              "type": "string"
+            },
+            {
+              "id": "phone_formatted",
+              "name": "phone_formatted",
+              "value": "=+{{ $json.body.data.key.remoteJid.replace('@s.whatsapp.net', '') }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "={{ $json.body.data.message?.conversation || $json.body.data.message?.extendedTextMessage?.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "from_me",
+              "name": "from_me",
+              "value": "={{ $json.body.data.key.fromMe }}",
+              "type": "boolean"
+            },
+            {
+              "id": "push_name",
+              "name": "push_name",
+              "value": "={{ $json.body.data.pushName || 'Utilisateur' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $json.body.data.messageTimestamp }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-7712, 2992],
+      "id": "extract-data",
+      "name": "2 - Extract Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.from_me }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-7488, 2992],
+      "id": "check-valid",
+      "name": "3 - Message valide ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-7264, 3088],
+      "id": "fin-ignore",
+      "name": "FIN - Ignoré"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT value FROM admin_config WHERE key = 'admin_phone' LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-7264, 2896],
+      "id": "get-admin-phone",
+      "name": "4 - Get Admin Phone",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('2 - Extract Data').item.json.phone }}",
+              "rightValue": "={{ $json.value }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-7040, 2896],
+      "id": "check-not-admin",
+      "name": "5 - Pas admin ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-6816, 2992],
+      "id": "fin-admin",
+      "name": "FIN - Admin ignoré"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT id, phone, name, first_name, city, age, gender, status, looking_for_gender, preferred_age_min, preferred_age_max, preferred_city, qualification_complete, conversation_phase FROM leads WHERE phone = '{{ $('2 - Extract Data').item.json.phone_formatted }}' OR phone = '{{ $('2 - Extract Data').item.json.phone }}' LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-6816, 2800],
+      "id": "get-lead",
+      "name": "6 - Get Lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-6592, 2800],
+      "id": "check-lead-exists",
+      "name": "7 - Lead existe ?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO leads (phone, name, status, source, conversation_phase, created_at, updated_at) VALUES ('{{ $('2 - Extract Data').item.json.phone_formatted }}', '{{ $('2 - Extract Data').item.json.push_name.replace(/'/g, \"''\") }}', 'prospect_anonyme', 'whatsapp_direct', 'new', NOW(), NOW()) RETURNING id, phone, name, status, city, age, gender, looking_for_gender, preferred_age_min, preferred_age_max, preferred_city, qualification_complete, conversation_phase;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-6368, 2872],
+      "id": "create-lead",
+      "name": "8 - Créer Lead",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "lead_id",
+              "name": "lead_id",
+              "value": "={{ $('6 - Get Lead').item.json.id || $('8 - Créer Lead').item.json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "lead_phone",
+              "name": "lead_phone",
+              "value": "={{ $('6 - Get Lead').item.json.phone || $('8 - Créer Lead').item.json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "lead_name",
+              "name": "lead_name",
+              "value": "={{ $('6 - Get Lead').item.json.name || $('8 - Créer Lead').item.json.name || $('2 - Extract Data').item.json.push_name }}",
+              "type": "string"
+            },
+            {
+              "id": "user_message",
+              "name": "user_message",
+              "value": "={{ $('2 - Extract Data').item.json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "looking_for_gender",
+              "name": "looking_for_gender",
+              "value": "={{ $('6 - Get Lead').item.json.looking_for_gender || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "preferred_age_min",
+              "name": "preferred_age_min",
+              "value": "={{ $('6 - Get Lead').item.json.preferred_age_min || null }}",
+              "type": "number"
+            },
+            {
+              "id": "preferred_age_max",
+              "name": "preferred_age_max",
+              "value": "={{ $('6 - Get Lead').item.json.preferred_age_max || null }}",
+              "type": "number"
+            },
+            {
+              "id": "preferred_city",
+              "name": "preferred_city",
+              "value": "={{ $('6 - Get Lead').item.json.preferred_city || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "qualification_complete",
+              "name": "qualification_complete",
+              "value": "={{ $('6 - Get Lead').item.json.qualification_complete || false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "conversation_phase",
+              "name": "conversation_phase",
+              "value": "={{ $('6 - Get Lead').item.json.conversation_phase || 'new' }}",
+              "type": "string"
+            },
+            {
+              "id": "is_new_lead",
+              "name": "is_new_lead",
+              "value": "={{ !$('6 - Get Lead').item.json.id }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-6144, 2800],
+      "id": "prepare-context",
+      "name": "9 - Préparer Contexte"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO conversations (lead_id, direction, content, message_type, sender_type, created_at) VALUES ({{ $json.lead_id }}, 'in', '{{ $json.user_message.replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\") }}', 'text', 'client', NOW());",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-5920, 2800],
+      "id": "log-message-in",
+      "name": "10 - Log Message IN",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT COALESCE(status, 'bot_actif') as conv_status FROM conversations WHERE lead_id = {{ $('9 - Préparer Contexte').item.json.lead_id }} ORDER BY created_at DESC LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-5696, 2800],
+      "id": "get-conv-status",
+      "name": "11 - Get Conv Status",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.conv_status }}",
+              "rightValue": "attente_humain",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-5472, 2800],
+      "id": "check-bot-actif",
+      "name": "12 - Bot actif ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-5248, 2896],
+      "id": "fin-attente-humain",
+      "name": "FIN - Attente humain"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT direction, content, sender_type, intent, created_at FROM conversations WHERE lead_id = {{ $('9 - Préparer Contexte').item.json.lead_id }} ORDER BY created_at DESC LIMIT 15;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-5248, 2592],
+      "id": "get-history",
+      "name": "13 - Get History",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('9 - Préparer Contexte').first().json.user_message.toLowerCase();\nconst current = $('9 - Préparer Contexte').first().json;\n\nlet extracted = {\n  gender: current.looking_for_gender || null,\n  age_min: current.preferred_age_min || null,\n  age_max: current.preferred_age_max || null,\n  city: current.preferred_city || null\n};\n\n// Extraction du genre recherché\nif (!extracted.gender) {\n  if (/\\b(femme|fille|dame|épouse|une femme)\\b/i.test(msg)) extracted.gender = 'femme';\n  else if (/\\b(homme|garçon|monsieur|époux|mec|un homme)\\b/i.test(msg)) extracted.gender = 'homme';\n}\n\n// Extraction de la tranche d'âge\nconst ageMatch = msg.match(/(\\d{2})\\s*[-àa]\\s*(\\d{2})/i);\nif (ageMatch) {\n  extracted.age_min = parseInt(ageMatch[1]);\n  extracted.age_max = parseInt(ageMatch[2]);\n} else {\n  const singleAge = msg.match(/\\b(\\d{2})\\s*ans\\b/i);\n  if (singleAge && !extracted.age_min) {\n    const age = parseInt(singleAge[1]);\n    extracted.age_min = Math.max(18, age - 5);\n    extracted.age_max = age + 5;\n  }\n}\n\n// Extraction de la ville\nconst cities = ['douala', 'yaoundé', 'yaounde', 'bafoussam', 'garoua', 'bamenda', 'kribi', 'limbé', 'buea', 'maroua'];\nfor (const city of cities) {\n  if (msg.includes(city)) {\n    extracted.city = city.charAt(0).toUpperCase() + city.slice(1);\n    if (city === 'yaounde') extracted.city = 'Yaoundé';\n    if (city === 'limbe') extracted.city = 'Limbé';\n    break;\n  }\n}\n\nconst hasNewInfo = (extracted.gender && !current.looking_for_gender) ||\n                   (extracted.age_min && !current.preferred_age_min) ||\n                   (extracted.city && !current.preferred_city);\n\nreturn [{\n  json: {\n    ...current,\n    extracted_gender: extracted.gender,\n    extracted_age_min: extracted.age_min,\n    extracted_age_max: extracted.age_max,\n    extracted_city: extracted.city,\n    has_new_qualification_info: hasNewInfo\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-5024, 2592],
+      "id": "extract-qualification",
+      "name": "14 - Extract Qualification"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.has_new_qualification_info }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-4800, 2592],
+      "id": "check-new-qual",
+      "name": "15 - New Qual Info?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE leads SET looking_for_gender = COALESCE(NULLIF('{{ $json.extracted_gender }}', ''), looking_for_gender), preferred_age_min = COALESCE({{ $json.extracted_age_min || 'NULL' }}, preferred_age_min), preferred_age_max = COALESCE({{ $json.extracted_age_max || 'NULL' }}, preferred_age_max), preferred_city = COALESCE(NULLIF('{{ $json.extracted_city }}', ''), preferred_city), updated_at = NOW() WHERE id = {{ $json.lead_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-4576, 2520],
+      "id": "update-lead-qual",
+      "name": "16 - Update Lead Qual",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $input.first().json;\nconst history = $('13 - Get History').all();\nconst msg = context.user_message.toLowerCase();\n\n// Dernier message bot et comptage\nconst lastBotMessage = history.find(h => h.json.sender_type === 'bot');\nconst msgCount = history.length;\n\n// Détection code profil\nconst hasProfileCode = /MAT-\\d{4}-\\d{3}/i.test(msg);\nconst profileCode = msg.match(/MAT-\\d{4}-\\d{3}/i)?.[0]?.toUpperCase() || null;\n\n// Qualification complète?\nconst qualComplete = !!(context.extracted_gender || context.looking_for_gender) &&\n                     !!(context.extracted_age_min || context.preferred_age_min) &&\n                     !!(context.extracted_city || context.preferred_city);\n\n// Analyse sentiment\nlet sentiment = 'neutre';\nif (/\\b(super|génial|merci|parfait|excellent|magnifique|content|heureux)\\b/i.test(msg)) sentiment = 'positif';\nif (/\\b(mauvais|nul|marre|frustré|énervé|déçu|problème)\\b/i.test(msg)) sentiment = 'negatif';\n\n// Construire l'historique formaté pour l'IA\nconst formattedHistory = history.slice(0, 10).reverse().map(h => {\n  const role = h.json.sender_type === 'client' ? 'Client' : 'Maya';\n  return `${role}: ${h.json.content}`;\n}).join('\\n');\n\nreturn [{\n  json: {\n    lead_id: context.lead_id,\n    lead_phone: context.lead_phone,\n    lead_name: context.lead_name,\n    user_message: context.user_message,\n    sentiment,\n    formatted_history: formattedHistory,\n    history_count: msgCount,\n    is_first_message: msgCount <= 1 || context.is_new_lead,\n    is_new_lead: context.is_new_lead,\n    last_agent: lastBotMessage?.json.intent || 'none',\n    detected_profile_code: profileCode,\n    has_profile_code: hasProfileCode,\n    qualification_complete: qualComplete,\n    looking_for_gender: context.extracted_gender || context.looking_for_gender || '',\n    preferred_age_min: context.extracted_age_min || context.preferred_age_min || null,\n    preferred_age_max: context.extracted_age_max || context.preferred_age_max || null,\n    preferred_city: context.extracted_city || context.preferred_city || '',\n    conversation_phase: context.conversation_phase || 'new'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-4352, 2592],
+      "id": "context-analyzer",
+      "name": "17 - Context Analyzer"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un routeur intelligent pour l'Agence Matrimoniale Cameroun. Analyse le message et le contexte pour déterminer quel agent doit traiter la demande.\n\n## CONTEXTE CLIENT\n- Nom: {{ $json.lead_name }}\n- Nouveau client: {{ $json.is_new_lead ? 'Oui' : 'Non' }}\n- Premier message: {{ $json.is_first_message ? 'Oui' : 'Non' }}\n- Dernier agent: {{ $json.last_agent }}\n- Phase conversation: {{ $json.conversation_phase }}\n\n## QUALIFICATION\n- Genre recherché: {{ $json.looking_for_gender || 'Non renseigné' }}\n- Âge recherché: {{ $json.preferred_age_min ? $json.preferred_age_min + '-' + $json.preferred_age_max + ' ans' : 'Non renseigné' }}\n- Ville: {{ $json.preferred_city || 'Non renseignée' }}\n- Qualification complète: {{ $json.qualification_complete ? 'Oui' : 'Non' }}\n\n## HISTORIQUE RÉCENT\n{{ $json.formatted_history || 'Aucun historique' }}\n\n## MESSAGE ACTUEL\n\"{{ $json.user_message }}\"\n\n## CODE PROFIL DÉTECTÉ\n{{ $json.has_profile_code ? $json.detected_profile_code : 'Aucun' }}\n\n## AGENTS DISPONIBLES\n1. GREETER - Accueil et salutations. Utiliser pour: premiers messages, salutations simples (bonjour, salut), relance de conversation.\n2. QUALIFIER - Qualification des besoins. Utiliser quand: la qualification n'est pas complète ET le client parle de recherche de partenaire.\n3. MATCHMAKER - Recherche de profils compatibles. Utiliser quand: qualification complète ET le client veut voir des profils.\n4. PRESENTER - Présentation détaillée d'un profil. Utiliser quand: un code profil MAT-XXXX-XXX est mentionné.\n5. FAQ - Questions sur l'agence. Utiliser pour: questions sur le fonctionnement, les tarifs, le processus, la confidentialité.\n6. ESCALATION - Transfert vers humain. Utiliser pour: demande explicite de conseiller, intérêt confirmé pour un profil, demande de contact.\n\n## RÈGLES DE ROUTAGE\n- Si is_first_message=true → GREETER\n- Si code profil détecté → PRESENTER\n- Si message contient \"tarif\", \"prix\", \"comment\", \"fonctionn\" → FAQ\n- Si message contient \"conseiller\", \"humain\", \"contact\", \"intéresse\", \"rencontrer\" → ESCALATION\n- Si qualification_complete=false ET parle de recherche → QUALIFIER\n- Si qualification_complete=true ET parle de profils → MATCHMAKER\n- Si message simple (oui, non, ok, merci) → suivre le contexte du dernier agent\n- Par défaut → GREETER\n\nRéponds UNIQUEMENT avec le nom de l'agent choisi, rien d'autre.",
+        "options": {
+          "systemMessage": "Tu es un routeur de conversation. Tu dois analyser le contexte et répondre UNIQUEMENT avec le nom de l'agent: GREETER, QUALIFIER, MATCHMAKER, PRESENTER, FAQ ou ESCALATION. Aucune explication, juste le nom."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-4128, 2592],
+      "id": "ai-router",
+      "name": "18 - AI Router"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 20
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-4128, 2816],
+      "id": "llm-router",
+      "name": "LLM Router",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst routerOutput = (input.output || input.text || 'GREETER').toUpperCase().trim();\n\n// Nettoyer la sortie du router\nconst validRoutes = ['GREETER', 'QUALIFIER', 'MATCHMAKER', 'PRESENTER', 'FAQ', 'ESCALATION'];\nlet route = 'GREETER';\n\nfor (const r of validRoutes) {\n  if (routerOutput.includes(r)) {\n    route = r;\n    break;\n  }\n}\n\n// Passer toutes les données du contexte\nconst context = $('17 - Context Analyzer').first().json;\n\nreturn [{\n  json: {\n    route,\n    ...context\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-3904, 2592],
+      "id": "parse-route",
+      "name": "18b - Parse Route"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "GREETER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "greeter"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "QUALIFIER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "qualifier"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "MATCHMAKER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "matchmaker"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "PRESENTER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "presenter"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "faq"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "ESCALATION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "escalation"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [-3680, 2512],
+      "id": "switch-agent",
+      "name": "19 - Switch Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Client: {{ $json.lead_name }}\nMessage: \"{{ $json.user_message }}\"\n\nTu es Maya, assistante virtuelle chaleureuse de l'Agence Matrimoniale Cameroun (AMC).\n\nAccueille ce client et propose ton aide pour trouver son partenaire idéal.\n\nRègles:\n- Maximum 2-3 phrases courtes\n- Ton amical et naturel\n- Mentionne que tu peux aider à trouver un partenaire compatible\n- Termine par UNE question ouverte simple",
+        "options": {
+          "systemMessage": "Tu es Maya, assistante virtuelle amicale et professionnelle de l'Agence Matrimoniale Cameroun. Tu accueilles les clients avec chaleur et bienveillance. Réponds toujours en français, de manière concise et naturelle."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-3456, 1488],
+      "id": "agent-greeter",
+      "name": "Agent GREETER"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 200
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-3456, 1712],
+      "id": "llm-greeter",
+      "name": "LLM Greeter",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=greeter_{{ $('17 - Context Analyzer').first().json.lead_id }}",
+        "contextWindowLength": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-3328, 1712],
+      "id": "memory-greeter",
+      "name": "Memory Greeter",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "name": "rechercher_info_agence",
+        "description": "Recherche des informations sur l'agence matrimoniale dans la base de connaissances. Utilise cet outil pour répondre aux questions sur l'agence, son fonctionnement, ses valeurs.",
+        "workflowId": "={{ $vars.WORKFLOW_RAG_KNOWLEDGE }}",
+        "responsePropertyName": "response",
+        "fields": {
+          "values": [
+            {
+              "name": "query",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3200, 1712],
+      "id": "tool-rag-greeter",
+      "name": "Tool RAG Greeter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Client: {{ $json.lead_name }}\nMessage: \"{{ $json.user_message }}\"\n\nCritères actuels:\n- Genre recherché: {{ $json.looking_for_gender || 'Non renseigné' }}\n- Âge: {{ $json.preferred_age_min ? $json.preferred_age_min + '-' + $json.preferred_age_max + ' ans' : 'Non renseigné' }}\n- Ville: {{ $json.preferred_city || 'Non renseignée' }}\n\nTu dois compléter la qualification du client. Pose UNE seule question pour obtenir l'information manquante:\n1. Si genre manquant → demande s'il cherche un homme ou une femme\n2. Si âge manquant → demande la tranche d'âge souhaitée\n3. Si ville manquante → demande la ville de préférence\n\nRègles:\n- UNE seule question, naturelle et conversationnelle\n- Maximum 2 phrases\n- Sois empathique et encourageant",
+        "options": {
+          "systemMessage": "Tu es Maya, conseillère matrimoniale. Tu qualifies les besoins des clients de façon naturelle et bienveillante pour les aider à trouver leur partenaire idéal. Réponds en français de manière concise."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-3456, 1904],
+      "id": "agent-qualifier",
+      "name": "Agent QUALIFIER"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 200
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-3456, 2128],
+      "id": "llm-qualifier",
+      "name": "LLM Qualifier",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=qualifier_{{ $('17 - Context Analyzer').first().json.lead_id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-3328, 2128],
+      "id": "memory-qualifier",
+      "name": "Memory Qualifier",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "name": "rechercher_criteres_profils",
+        "description": "Recherche des informations sur les critères de profils disponibles et les types de recherche possibles.",
+        "workflowId": "={{ $vars.WORKFLOW_RAG_KNOWLEDGE }}",
+        "responsePropertyName": "response",
+        "fields": {
+          "values": [
+            {
+              "name": "query",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3200, 2128],
+      "id": "tool-rag-qualifier",
+      "name": "Tool RAG Qualifier"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Client: {{ $json.lead_name }}\nRecherche: {{ $json.looking_for_gender }} de {{ $json.preferred_age_min }}-{{ $json.preferred_age_max }} ans à {{ $json.preferred_city }}\n\nMessage: \"{{ $json.user_message }}\"\n\nUtilise l'outil 'rechercher_profils_compatibles' pour trouver des profils correspondant aux critères du client.\n\nPrésente 2-3 profils de façon attractive:\n- Code profil (MAT-XXXX-XXX)\n- Prénom, âge, ville\n- Une phrase accrocheuse sur la personnalité ou profession\n\nRègles:\n- Maximum 4-5 phrases au total\n- Mets en valeur les points forts\n- Termine par: \"Un profil vous intéresse? Dites-moi son code!\"",
+        "options": {
+          "systemMessage": "Tu es Maya, conseillère matrimoniale experte. Tu présentes des profils de façon attrayante et professionnelle. Utilise TOUJOURS l'outil de recherche pour trouver des profils réels. Réponds en français de manière engageante."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-3456, 2320],
+      "id": "agent-matchmaker",
+      "name": "Agent MATCHMAKER"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.6,
+          "maxTokens": 400
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-3456, 2544],
+      "id": "llm-matchmaker",
+      "name": "LLM Matchmaker",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=matchmaker_{{ $('17 - Context Analyzer').first().json.lead_id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-3328, 2544],
+      "id": "memory-matchmaker",
+      "name": "Memory Matchmaker",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "name": "rechercher_profils_compatibles",
+        "description": "Recherche des profils compatibles dans la base de données selon les critères: genre, âge min, âge max, ville. Retourne une liste de profils avec leurs informations.",
+        "workflowId": "={{ $vars.WORKFLOW_SEARCH_PROFILES }}",
+        "responsePropertyName": "profiles",
+        "fields": {
+          "values": [
+            {
+              "name": "gender",
+              "type": "string",
+              "description": "Genre recherché: homme ou femme"
+            },
+            {
+              "name": "age_min",
+              "type": "number",
+              "description": "Âge minimum"
+            },
+            {
+              "name": "age_max",
+              "type": "number",
+              "description": "Âge maximum"
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "description": "Ville de préférence"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3200, 2544],
+      "id": "tool-search-profiles",
+      "name": "Tool Search Profiles"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Client: {{ $json.lead_name }}\nCode profil demandé: {{ $json.detected_profile_code }}\n\nMessage: \"{{ $json.user_message }}\"\n\nUtilise l'outil 'obtenir_details_profil' avec le code {{ $json.detected_profile_code }} pour récupérer les informations complètes.\n\nPrésente le profil de façon détaillée et attrayante:\n- Prénom, âge, ville\n- Profession et études\n- Description personnelle et centres d'intérêt\n- Ce qu'il/elle recherche chez un partenaire\n\nRègles:\n- Sois enthousiaste mais professionnel\n- Maximum 5-6 phrases\n- Termine TOUJOURS par: \"Ce profil vous intéresse? Je peux organiser une mise en contact! 😊\"",
+        "options": {
+          "systemMessage": "Tu es Maya, conseillère matrimoniale. Tu présentes les profils en détail de façon engageante et professionnelle. Utilise TOUJOURS l'outil pour obtenir les vraies informations du profil. Réponds en français."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-3456, 2736],
+      "id": "agent-presenter",
+      "name": "Agent PRESENTER"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 450
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-3456, 2960],
+      "id": "llm-presenter",
+      "name": "LLM Presenter",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=presenter_{{ $('17 - Context Analyzer').first().json.lead_id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-3328, 2960],
+      "id": "memory-presenter",
+      "name": "Memory Presenter",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "name": "obtenir_details_profil",
+        "description": "Récupère les détails complets d'un profil à partir de son code (format MAT-XXXX-XXX). Retourne toutes les informations du profil.",
+        "workflowId": "={{ $vars.WORKFLOW_GET_PROFILE }}",
+        "responsePropertyName": "profile",
+        "fields": {
+          "values": [
+            {
+              "name": "profile_code",
+              "type": "string",
+              "description": "Code du profil au format MAT-XXXX-XXX"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3200, 2960],
+      "id": "tool-get-profile",
+      "name": "Tool Get Profile"
+    },
+    {
+      "parameters": {
+        "name": "enregistrer_vue_profil",
+        "description": "Enregistre qu'un client a consulté un profil pour le suivi statistique.",
+        "workflowId": "={{ $vars.WORKFLOW_LOG_VIEW }}",
+        "responsePropertyName": "success",
+        "fields": {
+          "values": [
+            {
+              "name": "lead_id",
+              "type": "number"
+            },
+            {
+              "name": "profile_code",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3072, 2960],
+      "id": "tool-log-view",
+      "name": "Tool Log View"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Client: {{ $json.lead_name }}\nQuestion: \"{{ $json.user_message }}\"\n\nUtilise l'outil 'rechercher_faq' pour trouver la réponse dans la base de connaissances.\n\nRéponds de façon claire et concise sur:\n- Fonctionnement de l'agence\n- Processus d'inscription\n- Tarifs (inscription gratuite, mise en relation 5000 FCFA)\n- Confidentialité et sécurité\n- Modes de paiement (MTN MoMo, Orange Money)\n\nRègles:\n- Maximum 3-4 phrases\n- Sois factuel et rassurant\n- Si pertinent, propose de voir des profils",
+        "options": {
+          "systemMessage": "Tu es Maya, conseillère de l'Agence Matrimoniale Cameroun. Tu réponds aux questions sur l'agence de façon professionnelle et rassurante. Utilise TOUJOURS l'outil de recherche pour des réponses précises. Réponds en français."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-3456, 3152],
+      "id": "agent-faq",
+      "name": "Agent FAQ"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 300
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-3456, 3376],
+      "id": "llm-faq",
+      "name": "LLM FAQ",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=faq_{{ $('17 - Context Analyzer').first().json.lead_id }}",
+        "contextWindowLength": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-3328, 3376],
+      "id": "memory-faq",
+      "name": "Memory FAQ",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "name": "rechercher_faq",
+        "description": "Recherche des informations dans la base de connaissances de l'agence: tarifs, fonctionnement, processus, confidentialité, etc.",
+        "workflowId": "={{ $vars.WORKFLOW_RAG_KNOWLEDGE }}",
+        "responsePropertyName": "response",
+        "fields": {
+          "values": [
+            {
+              "name": "query",
+              "type": "string",
+              "description": "La question ou le sujet à rechercher"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3200, 3376],
+      "id": "tool-rag-faq",
+      "name": "Tool RAG FAQ"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Client: {{ $json.lead_name }}\nTéléphone: {{ $json.lead_phone }}\nMessage: \"{{ $json.user_message }}\"\n\nLe client souhaite être mis en contact avec un conseiller ou montre un intérêt pour un profil.\n\nUtilise l'outil 'notifier_conseiller' pour alerter l'équipe.\n\nRéponds au client:\n1. Confirme que tu transfères sa demande à un conseiller\n2. Indique qu'il sera recontacté rapidement (dans l'heure si horaires ouvrés)\n3. Remercie-le de sa confiance\n\nRègles:\n- Maximum 2-3 phrases\n- Ton rassurant et professionnel\n- Montre que sa demande est prise en compte",
+        "options": {
+          "systemMessage": "Tu es Maya, tu transfères les demandes vers un conseiller humain. Sois rassurante et professionnelle. Réponds en français."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-3456, 3568],
+      "id": "agent-escalation",
+      "name": "Agent ESCALATION"
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 200
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-3456, 3792],
+      "id": "llm-escalation",
+      "name": "LLM Escalation",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=escalation_{{ $('17 - Context Analyzer').first().json.lead_id }}",
+        "contextWindowLength": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [-3328, 3792],
+      "id": "memory-escalation",
+      "name": "Memory Escalation",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "name": "notifier_conseiller",
+        "description": "Notifie un conseiller humain qu'un client demande à être contacté. Envoie une alerte WhatsApp à l'administrateur.",
+        "workflowId": "={{ $vars.WORKFLOW_NOTIFY_ADMIN }}",
+        "responsePropertyName": "notified",
+        "fields": {
+          "values": [
+            {
+              "name": "lead_id",
+              "type": "number"
+            },
+            {
+              "name": "lead_name",
+              "type": "string"
+            },
+            {
+              "name": "lead_phone",
+              "type": "string"
+            },
+            {
+              "name": "reason",
+              "type": "string",
+              "description": "Raison de l'escalade"
+            },
+            {
+              "name": "last_message",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3200, 3792],
+      "id": "tool-notify-admin",
+      "name": "Tool Notify Admin"
+    },
+    {
+      "parameters": {
+        "name": "creer_demande_contact",
+        "description": "Crée une demande de mise en contact entre un client et un profil. Utilisé quand le client confirme son intérêt.",
+        "workflowId": "={{ $vars.WORKFLOW_CREATE_REQUEST }}",
+        "responsePropertyName": "request",
+        "fields": {
+          "values": [
+            {
+              "name": "lead_id",
+              "type": "number"
+            },
+            {
+              "name": "profile_code",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [-3072, 3792],
+      "id": "tool-create-request",
+      "name": "Tool Create Request"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": []
+        },
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [-3104, 2512],
+      "id": "merge-agents",
+      "name": "20 - Merge Agents"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nlet response = input.output || input.text || '';\nconst context = $('18b - Parse Route').first().json;\nconst route = context.route || 'GREETER';\n\n// Nettoyer la réponse\nresponse = response\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/\\*\\*([^*]+)\\*\\*/g, '*$1*')  // Bold markdown -> WhatsApp\n  .replace(/^#+\\s/gm, '')\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .trim();\n\n// Limiter la longueur\nif (response.length > 500) {\n  const sentences = response.split(/(?<=[.!?])\\s+/);\n  let trimmed = '';\n  for (const s of sentences) {\n    if ((trimmed + s).length > 480) break;\n    trimmed += (trimmed ? ' ' : '') + s;\n  }\n  response = trimmed || response.substring(0, 497) + '...';\n}\n\n// S'assurer que ça finit correctement\nif (response && !response.match(/[.!?😊]$/)) {\n  response += '.';\n}\n\nconst needsEscalation = route === 'ESCALATION';\n\nreturn [{\n  json: {\n    final_response: response,\n    agent_used: route,\n    needs_escalation: needsEscalation,\n    lead_id: context.lead_id,\n    lead_name: context.lead_name,\n    lead_phone: context.lead_phone,\n    detected_profile_code: context.detected_profile_code\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-2880, 2512],
+      "id": "post-processor",
+      "name": "21 - Post-Processor"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO conversations (lead_id, direction, content, message_type, sender_type, intent, profile_code, created_at) VALUES ({{ $json.lead_id }}, 'out', '{{ $json.final_response.replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\") }}', 'text', 'bot', '{{ $json.agent_used }}', {{ $json.detected_profile_code ? \"'\" + $json.detected_profile_code + \"'\" : 'NULL' }}, NOW());",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-2656, 2512],
+      "id": "log-message-out",
+      "name": "22 - Log Message OUT",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.needs_escalation }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-2432, 2512],
+      "id": "check-escalation",
+      "name": "23 - Escalation ?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE conversations SET status = 'attente_humain' WHERE lead_id = {{ $('21 - Post-Processor').first().json.lead_id }} AND created_at >= NOW() - INTERVAL '1 hour';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-2208, 2440],
+      "id": "update-escalation",
+      "name": "24 - Update Escalation",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "new",
+        "remoteJid": "={{ $('2 - Extract Data').first().json.phone }}",
+        "messageText": "={{ $('21 - Post-Processor').first().json.final_response }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [-1984, 2512],
+      "id": "send-whatsapp",
+      "name": "25 - Send WhatsApp",
+      "credentials": {
+        "evolutionApi": {
+          "id": "V1jMvwrsC7FPvBug",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE leads SET status = CASE WHEN status IN ('nouveau_lead', 'prospect_anonyme') THEN 'prospect_actif' ELSE status END, conversation_phase = '{{ $('21 - Post-Processor').first().json.agent_used.toLowerCase() }}', updated_at = NOW() WHERE id = {{ $('21 - Post-Processor').first().json.lead_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-1760, 2512],
+      "id": "update-lead",
+      "name": "26 - Update Lead",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO agent_logs (lead_id, agent_name, input_summary, output_summary, success, created_at) VALUES ({{ $('21 - Post-Processor').first().json.lead_id }}, '{{ $('21 - Post-Processor').first().json.agent_used }}', '{{ $('17 - Context Analyzer').first().json.user_message.substring(0, 100).replace(/'/g, \"''\") }}', '{{ $('21 - Post-Processor').first().json.final_response.substring(0, 100).replace(/'/g, \"''\") }}', true, NOW());",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-1536, 2512],
+      "id": "log-agent",
+      "name": "27 - Log Agent",
+      "credentials": {
+        "postgres": { "id": "Gv2oFLeW3VbnJ0xx", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-1312, 2512],
+      "id": "fin-success",
+      "name": "FIN ✅"
+    }
+  ],
+  "connections": {
+    "1 - Webhook WhatsApp": {
+      "main": [[{ "node": "2 - Extract Data", "type": "main", "index": 0 }]]
+    },
+    "2 - Extract Data": {
+      "main": [[{ "node": "3 - Message valide ?", "type": "main", "index": 0 }]]
+    },
+    "3 - Message valide ?": {
+      "main": [
+        [{ "node": "4 - Get Admin Phone", "type": "main", "index": 0 }],
+        [{ "node": "FIN - Ignoré", "type": "main", "index": 0 }]
+      ]
+    },
+    "4 - Get Admin Phone": {
+      "main": [[{ "node": "5 - Pas admin ?", "type": "main", "index": 0 }]]
+    },
+    "5 - Pas admin ?": {
+      "main": [
+        [{ "node": "6 - Get Lead", "type": "main", "index": 0 }],
+        [{ "node": "FIN - Admin ignoré", "type": "main", "index": 0 }]
+      ]
+    },
+    "6 - Get Lead": {
+      "main": [[{ "node": "7 - Lead existe ?", "type": "main", "index": 0 }]]
+    },
+    "7 - Lead existe ?": {
+      "main": [
+        [{ "node": "9 - Préparer Contexte", "type": "main", "index": 0 }],
+        [{ "node": "8 - Créer Lead", "type": "main", "index": 0 }]
+      ]
+    },
+    "8 - Créer Lead": {
+      "main": [
+        [{ "node": "9 - Préparer Contexte", "type": "main", "index": 0 }]
+      ]
+    },
+    "9 - Préparer Contexte": {
+      "main": [[{ "node": "10 - Log Message IN", "type": "main", "index": 0 }]]
+    },
+    "10 - Log Message IN": {
+      "main": [[{ "node": "11 - Get Conv Status", "type": "main", "index": 0 }]]
+    },
+    "11 - Get Conv Status": {
+      "main": [[{ "node": "12 - Bot actif ?", "type": "main", "index": 0 }]]
+    },
+    "12 - Bot actif ?": {
+      "main": [
+        [{ "node": "13 - Get History", "type": "main", "index": 0 }],
+        [{ "node": "FIN - Attente humain", "type": "main", "index": 0 }]
+      ]
+    },
+    "13 - Get History": {
+      "main": [
+        [{ "node": "14 - Extract Qualification", "type": "main", "index": 0 }]
+      ]
+    },
+    "14 - Extract Qualification": {
+      "main": [[{ "node": "15 - New Qual Info?", "type": "main", "index": 0 }]]
+    },
+    "15 - New Qual Info?": {
+      "main": [
+        [{ "node": "16 - Update Lead Qual", "type": "main", "index": 0 }],
+        [{ "node": "17 - Context Analyzer", "type": "main", "index": 0 }]
+      ]
+    },
+    "16 - Update Lead Qual": {
+      "main": [
+        [{ "node": "17 - Context Analyzer", "type": "main", "index": 0 }]
+      ]
+    },
+    "17 - Context Analyzer": {
+      "main": [[{ "node": "18 - AI Router", "type": "main", "index": 0 }]]
+    },
+    "18 - AI Router": {
+      "main": [[{ "node": "18b - Parse Route", "type": "main", "index": 0 }]]
+    },
+    "LLM Router": {
+      "ai_languageModel": [
+        [{ "node": "18 - AI Router", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "18b - Parse Route": {
+      "main": [[{ "node": "19 - Switch Agent", "type": "main", "index": 0 }]]
+    },
+    "19 - Switch Agent": {
+      "main": [
+        [{ "node": "Agent GREETER", "type": "main", "index": 0 }],
+        [{ "node": "Agent QUALIFIER", "type": "main", "index": 0 }],
+        [{ "node": "Agent MATCHMAKER", "type": "main", "index": 0 }],
+        [{ "node": "Agent PRESENTER", "type": "main", "index": 0 }],
+        [{ "node": "Agent FAQ", "type": "main", "index": 0 }],
+        [{ "node": "Agent ESCALATION", "type": "main", "index": 0 }],
+        [{ "node": "Agent GREETER", "type": "main", "index": 0 }]
+      ]
+    },
+    "Agent GREETER": {
+      "main": [[{ "node": "20 - Merge Agents", "type": "main", "index": 0 }]]
+    },
+    "LLM Greeter": {
+      "ai_languageModel": [
+        [{ "node": "Agent GREETER", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Memory Greeter": {
+      "ai_memory": [
+        [{ "node": "Agent GREETER", "type": "ai_memory", "index": 0 }]
+      ]
+    },
+    "Tool RAG Greeter": {
+      "ai_tool": [[{ "node": "Agent GREETER", "type": "ai_tool", "index": 0 }]]
+    },
+    "Agent QUALIFIER": {
+      "main": [[{ "node": "20 - Merge Agents", "type": "main", "index": 0 }]]
+    },
+    "LLM Qualifier": {
+      "ai_languageModel": [
+        [{ "node": "Agent QUALIFIER", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Memory Qualifier": {
+      "ai_memory": [
+        [{ "node": "Agent QUALIFIER", "type": "ai_memory", "index": 0 }]
+      ]
+    },
+    "Tool RAG Qualifier": {
+      "ai_tool": [
+        [{ "node": "Agent QUALIFIER", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "Agent MATCHMAKER": {
+      "main": [[{ "node": "20 - Merge Agents", "type": "main", "index": 0 }]]
+    },
+    "LLM Matchmaker": {
+      "ai_languageModel": [
+        [{ "node": "Agent MATCHMAKER", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Memory Matchmaker": {
+      "ai_memory": [
+        [{ "node": "Agent MATCHMAKER", "type": "ai_memory", "index": 0 }]
+      ]
+    },
+    "Tool Search Profiles": {
+      "ai_tool": [
+        [{ "node": "Agent MATCHMAKER", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "Agent PRESENTER": {
+      "main": [[{ "node": "20 - Merge Agents", "type": "main", "index": 0 }]]
+    },
+    "LLM Presenter": {
+      "ai_languageModel": [
+        [{ "node": "Agent PRESENTER", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Memory Presenter": {
+      "ai_memory": [
+        [{ "node": "Agent PRESENTER", "type": "ai_memory", "index": 0 }]
+      ]
+    },
+    "Tool Get Profile": {
+      "ai_tool": [
+        [{ "node": "Agent PRESENTER", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "Tool Log View": {
+      "ai_tool": [
+        [{ "node": "Agent PRESENTER", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "Agent FAQ": {
+      "main": [[{ "node": "20 - Merge Agents", "type": "main", "index": 0 }]]
+    },
+    "LLM FAQ": {
+      "ai_languageModel": [
+        [{ "node": "Agent FAQ", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Memory FAQ": {
+      "ai_memory": [[{ "node": "Agent FAQ", "type": "ai_memory", "index": 0 }]]
+    },
+    "Tool RAG FAQ": {
+      "ai_tool": [[{ "node": "Agent FAQ", "type": "ai_tool", "index": 0 }]]
+    },
+    "Agent ESCALATION": {
+      "main": [[{ "node": "20 - Merge Agents", "type": "main", "index": 0 }]]
+    },
+    "LLM Escalation": {
+      "ai_languageModel": [
+        [{ "node": "Agent ESCALATION", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Memory Escalation": {
+      "ai_memory": [
+        [{ "node": "Agent ESCALATION", "type": "ai_memory", "index": 0 }]
+      ]
+    },
+    "Tool Notify Admin": {
+      "ai_tool": [
+        [{ "node": "Agent ESCALATION", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "Tool Create Request": {
+      "ai_tool": [
+        [{ "node": "Agent ESCALATION", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "20 - Merge Agents": {
+      "main": [[{ "node": "21 - Post-Processor", "type": "main", "index": 0 }]]
+    },
+    "21 - Post-Processor": {
+      "main": [[{ "node": "22 - Log Message OUT", "type": "main", "index": 0 }]]
+    },
+    "22 - Log Message OUT": {
+      "main": [[{ "node": "23 - Escalation ?", "type": "main", "index": 0 }]]
+    },
+    "23 - Escalation ?": {
+      "main": [
+        [{ "node": "24 - Update Escalation", "type": "main", "index": 0 }],
+        [{ "node": "25 - Send WhatsApp", "type": "main", "index": 0 }]
+      ]
+    },
+    "24 - Update Escalation": {
+      "main": [[{ "node": "25 - Send WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "25 - Send WhatsApp": {
+      "main": [[{ "node": "26 - Update Lead", "type": "main", "index": 0 }]]
+    },
+    "26 - Update Lead": {
+      "main": [[{ "node": "27 - Log Agent", "type": "main", "index": 0 }]]
+    },
+    "27 - Log Agent": {
+      "main": [[{ "node": "FIN ✅", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
