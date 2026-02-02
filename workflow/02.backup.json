@@ -1,0 +1,1496 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-11488, -3760],
+      "id": "776ee9cd-eb15-4d58-956a-e895c529a4a5",
+      "name": "1 - Webhook WhatsApp",
+      "webhookId": "whatsapp-conversations-v3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.body.data.key.remoteJid.replace('@s.whatsapp.net', '') }}",
+              "type": "string"
+            },
+            {
+              "id": "phone_formatted",
+              "name": "phone_formatted",
+              "value": "=+{{ $json.body.data.key.remoteJid.replace('@s.whatsapp.net', '') }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "={{ $json.body.data.message?.conversation || $json.body.data.message?.extendedTextMessage?.text || $json.body.data.message?.imageMessage?.caption || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "from_me",
+              "name": "from_me",
+              "value": "={{ $json.body.data.key.fromMe }}",
+              "type": "boolean"
+            },
+            {
+              "id": "message_type",
+              "name": "message_type",
+              "value": "={{ $json.body.data.messageType }}",
+              "type": "string"
+            },
+            {
+              "id": "push_name",
+              "name": "push_name",
+              "value": "={{ $json.body.data.pushName || 'Utilisateur' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $json.body.data.messageTimestamp }}",
+              "type": "number"
+            },
+            {
+              "id": "has_media",
+              "name": "has_media",
+              "value": "={{ !!$json.body.data.message?.imageMessage || !!$json.body.data.message?.videoMessage || !!$json.body.data.message?.documentMessage }}",
+              "type": "boolean"
+            },
+            {
+              "id": "is_forwarded",
+              "name": "is_forwarded",
+              "value": "={{ !!$json.body.data.message?.extendedTextMessage?.contextInfo?.isForwarded || !!$json.body.data.message?.imageMessage?.contextInfo?.isForwarded }}",
+              "type": "boolean"
+            },
+            {
+              "id": "raw_data",
+              "name": "raw_data",
+              "value": "={{ JSON.stringify($json.body.data) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-11264, -3760],
+      "id": "be59565c-655b-4a4c-bf28-0810903c3c70",
+      "name": "2 - Extract Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-from-me",
+              "leftValue": "={{ $json.from_me }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "check-message-not-empty",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-11040, -3760],
+      "id": "cf0e19fd-6b5f-447d-a636-7d7de4a538c2",
+      "name": "3 - Message entrant valide ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-10816, -3664],
+      "id": "4d1d66c8-1ca7-464f-80b7-1424b912ee68",
+      "name": "FIN - Message ignoré"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT value FROM admin_config WHERE key = 'admin_phone' LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-10816, -3856],
+      "id": "23c9453f-b235-4db7-84f3-208be4435866",
+      "name": "4 - Get Admin Phone",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-not-admin",
+              "leftValue": "={{ $('2 - Extract Data').item.json.phone }}",
+              "rightValue": "={{ $json.value }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-10592, -3856],
+      "id": "69d0bf93-0a04-457c-b4a1-3a3be918fac2",
+      "name": "5 - Pas l'admin ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-10368, -3760],
+      "id": "6dbf728d-9e37-4250-aabc-db2c69c4c46e",
+      "name": "FIN - Message admin (ignoré)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT \n  id,\n  phone,\n  name,\n  first_name,\n  last_name,\n  city,\n  age,\n  gender,\n  status,\n  source,\n  notes,\n  created_at\nFROM leads \nWHERE phone = '{{ $('2 - Extract Data').item.json.phone_formatted }}' \n   OR phone = '{{ $('2 - Extract Data').item.json.phone }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-10368, -3952],
+      "id": "d19f42e9-383f-4ae6-8a40-48d48563289e",
+      "name": "6 - Get Lead by Phone",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-lead-exists",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-10144, -3952],
+      "id": "9d6a51c1-d9ea-43ab-8caf-4d6c5d6c9897",
+      "name": "7 - Lead existe ?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO leads (\n  phone,\n  name,\n  status,\n  source,\n  created_at,\n  updated_at\n)\nVALUES (\n  '{{ $('2 - Extract Data').item.json.phone_formatted }}',\n  '{{ $('2 - Extract Data').item.json.push_name }}',\n  'prospect_anonyme',\n  'whatsapp_direct',\n  NOW(),\n  NOW()\n)\nRETURNING id, phone, name, status, source, city, age, gender;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-9920, -3872],
+      "id": "1a95d1e5-439b-4f7e-80f7-99f55a89aa2a",
+      "name": "8 - Créer Lead Anonyme",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "lead_id",
+              "name": "lead_id",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.id || $('8 - Créer Lead Anonyme').item.json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "lead_phone",
+              "name": "lead_phone",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.phone || $('8 - Créer Lead Anonyme').item.json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "lead_name",
+              "name": "lead_name",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.name || $('8 - Créer Lead Anonyme').item.json.name || $('2 - Extract Data').item.json.push_name }}",
+              "type": "string"
+            },
+            {
+              "id": "lead_city",
+              "name": "lead_city",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.city || 'Non renseigné' }}",
+              "type": "string"
+            },
+            {
+              "id": "lead_age",
+              "name": "lead_age",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.age || null }}",
+              "type": "number"
+            },
+            {
+              "id": "lead_gender",
+              "name": "lead_gender",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.gender || 'Non renseigné' }}",
+              "type": "string"
+            },
+            {
+              "id": "lead_status",
+              "name": "lead_status",
+              "value": "={{ $('6 - Get Lead by Phone').item.json.status || $('8 - Créer Lead Anonyme').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "is_new_lead",
+              "name": "is_new_lead",
+              "value": "={{ !$('6 - Get Lead by Phone').item.json.id }}",
+              "type": "boolean"
+            },
+            {
+              "id": "user_message",
+              "name": "user_message",
+              "value": "={{ $('2 - Extract Data').item.json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "is_forwarded",
+              "name": "is_forwarded",
+              "value": "={{ $('2 - Extract Data').item.json.is_forwarded }}",
+              "type": "boolean"
+            },
+            {
+              "id": "has_media",
+              "name": "has_media",
+              "value": "={{ $('2 - Extract Data').item.json.has_media }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-9696, -3952],
+      "id": "c283d5a2-8125-48b5-ad8a-5f8e287f8e09",
+      "name": "9 - Préparer Contexte Lead"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO conversations (\n  lead_id,\n  direction,\n  content,\n  message_type,\n  sender_type,\n  status,\n  metadata,\n  created_at\n)\nVALUES (\n  {{ $json.lead_id }},\n  'in',\n  '{{ $json.user_message.replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\") }}',\n  '{{ $('2 - Extract Data').item.json.message_type }}',\n  'client',\n  'bot_actif',\n  '{{ $('2 - Extract Data').item.json.raw_data.replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\") }}'::jsonb,\n  NOW()\n)\nRETURNING id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-9472, -3952],
+      "id": "4d9ea081-d7d1-4b51-af6f-6eda9865a3c8",
+      "name": "10 - Log Message IN",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT status \nFROM conversations \nWHERE lead_id = {{ $('9 - Préparer Contexte Lead').item.json.lead_id }}\nORDER BY created_at DESC \nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-9248, -3952],
+      "id": "e167ce02-5be8-42b5-b8b7-4712f4427718",
+      "name": "11 - Get Conversation Status",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-bot-actif",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "attente_humain",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-9024, -3952],
+      "id": "8a37389f-c88c-4841-a06e-2be00e2465dd",
+      "name": "12 - Bot peut répondre ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-8800, -3856],
+      "id": "7c4ce8d7-39a4-4e96-aad1-369d99d1bac0",
+      "name": "FIN - Attente humain"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT \n  direction,\n  content,\n  message_type,\n  profile_code,\n  intent,\n  created_at\nFROM conversations \nWHERE lead_id = {{ $('9 - Préparer Contexte Lead').item.json.lead_id }}\nORDER BY created_at DESC \nLIMIT 15;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-8800, -4048],
+      "id": "f8adfc76-4ec3-436e-95fa-44926294e57f",
+      "name": "13 - Get Conversation History",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT \n  code,\n  name,\n  age,\n  city,\n  gender,\n  profession,\n  marital_status,\n  description_short\nFROM profiles \nWHERE status = 'actif'\nORDER BY created_at DESC \nLIMIT 20;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-8576, -4048],
+      "id": "e22849a5-cdc7-463b-9d00-aa86d5e1642e",
+      "name": "14 - Get Active Profiles",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "full_context",
+              "name": "full_context",
+              "value": "=MESSAGE DU CLIENT:\n\"{{ $node[\"9 - Préparer Contexte Lead\"].json.user_message }}\"\n\n---\n\nINFORMATIONS CLIENT:\n- ID: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_id }}\n- Nom: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_name }}\n- Téléphone: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_phone }}\n- Ville: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_city }}\n- Âge: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_age || 'Non renseigné' }}\n- Genre: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_gender }}\n- Statut: {{ $node[\"9 - Préparer Contexte Lead\"].json.lead_status }}\n- Nouveau client: {{ $node[\"9 - Préparer Contexte Lead\"].json.is_new_lead ? 'Oui' : 'Non' }}\n- Message transféré: {{ $node[\"9 - Préparer Contexte Lead\"].json.is_forwarded ? 'Oui' : 'Non' }}\n\n---\n\nHISTORIQUE DE CONVERSATION (15 derniers messages):\n{{ $node[\"13 - Get Conversation History\"].all().reverse().map(m => `[${m.json.direction === 'in' ? 'CLIENT' : 'ASSISTANT'}]: ${m.json.content}`).join('\\n') || 'Aucun historique (première interaction)' }}\n\n---\n\nPROFILS DISPONIBLES (20 derniers):\n{{ $node[\"14 - Get Active Profiles\"].all().map(p => `- ${p.json.code}: ${p.json.name}, ${p.json.age} ans, ${p.json.gender}, ${p.json.city}, ${p.json.profession || 'N/A'}`).join('\\n') || 'Aucun profil disponible' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-8352, -4048],
+      "id": "b0b60cc6-45f3-4af0-834d-66578764eac5",
+      "name": "15 - Préparer Contexte Complet"
+    },
+    {
+      "parameters": {
+        "model": "mistral-large-latest",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-8304, -3792],
+      "id": "99c3d6be-fe4e-4f8a-ac34-9ef8899c053b",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "=OUTIL POUR RECHERCHER UN PROFIL PAR SON CODE.\n\nQUAND UTILISER CET OUTIL:\n- Quand le client mentionne un code de profil (format: MAT-2025-XXX)\n- Quand le client transfère un message contenant un profil\n- Quand le client demande des détails sur un profil spécifique\n\nPARAMÈTRES À FOURNIR:\n- profile_code: Le code du profil au format MAT-YYYY-NNN (exemple: MAT-2025-042)\n- lead_id: L'ID du client qui consulte (récupéré du contexte)\n\nRÉSULTAT:\nL'outil retourne toutes les informations détaillées du profil demandé.",
+        "workflowId": {
+          "__rl": true,
+          "value": "XjGmr9OR2dicsx12",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/XjGmr9OR2dicsx12",
+          "cachedResultName": "Tool - Rechercher Profil"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "profile_code": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('profile_code', ``, 'string') }}"
+          },
+          "matchingColumns": ["profile_code"],
+          "schema": [
+            {
+              "id": "profile_code",
+              "displayName": "profile_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [-7952, -3552],
+      "id": "5819ee1f-5836-4570-ac39-5cb18006d716",
+      "name": "Tool - Rechercher Profil"
+    },
+    {
+      "parameters": {
+        "description": "=OUTIL POUR TRANSFÉRER LA CONVERSATION À UN CONSEILLER HUMAIN.\n\nQUAND UTILISER CET OUTIL (OBLIGATOIRE):\n- Quand le client demande un numéro de téléphone\n- Quand le client demande un contact direct\n- Quand le client veut une mise en relation\n- Quand le client veut rencontrer quelqu'un\n- Quand le client pose des questions sur les tarifs ou prix\n- Quand le client demande comment payer\n- Quand le client semble frustré ou mécontent\n- Quand le client fait une réclamation\n\nPARAMÈTRES À FOURNIR:\n- lead_id: L'ID du client\n- lead_name: Le nom du client\n- lead_phone: Le numéro du client\n- reason: La raison de l'escalade (contact_request, pricing_question, complaint, etc.)\n- profile_code: Le code du profil concerné (si applicable)\n- context: Un résumé de la conversation\n\nRÉSULTAT:\nL'outil notifie l'administrateur et retourne un message de confirmation pour le client.",
+        "workflowId": {
+          "__rl": true,
+          "value": "7L2qTjKljiWkJXRc",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/7L2qTjKljiWkJXRc",
+          "cachedResultName": "Send Message to Admin"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message', ``, 'string') }}"
+          },
+          "matchingColumns": ["message"],
+          "schema": [
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [-7792, -3568],
+      "id": "0c7ed5c3-de4b-490d-9c2c-fb7aba5750f6",
+      "name": "Tool - Escalader vers Admin"
+    },
+    {
+      "parameters": {
+        "description": "=OUTIL POUR ENREGISTRER QU'UN CLIENT A CONSULTÉ UN PROFIL.\n\nQUAND UTILISER CET OUTIL:\n- Après avoir présenté les détails d'un profil au client\n- Pour garder une trace des profils consultés\n\nPARAMÈTRES À FOURNIR:\n- lead_id: L'ID du client\n- profile_code: Le code du profil consulté\n\nRÉSULTAT:\nL'outil confirme que la consultation a été enregistrée.",
+        "workflowId": {
+          "__rl": true,
+          "value": "7lom9hgmYm2pzVu5",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/7lom9hgmYm2pzVu5",
+          "cachedResultName": "Tool - Enregistrer Consultation"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "profile_code": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('profile_code', ``, 'string') }}",
+            "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "profile_code",
+              "displayName": "profile_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [-7680, -3616],
+      "id": "2d93cb87-225e-4e10-b3a2-31df5a7aa299",
+      "name": "Tool - Enregistrer Consultation"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.full_context }}",
+        "options": {
+          "maxIterations": 10,
+          "systemMessage": "=════════════════════════════════════════════════════════════════════════════════\n                        AGENT CONVERSATIONNEL - AGENCE MATRIMONIALE\n════════════════════════════════════════════════════════════════════════════════\n\n[ANALYSE ÉMOTIONNELLE DU CLIENT]\nTon état d'esprit doit s'adapter à l'analyse suivante :\n- Sentiment détecté : {{ $json.analysis.sentiment }}\n- Urgence : {{ $json.analysis.urgency }}\n- Recommandation : {{ $json.analysis.decision }}\n- Ton suggéré : {{ $json.analysis.ton_suggeré }}\n\n[SECTION 1 - QUI TU ES]\n\nTu es l'ASSISTANT VIRTUEL de l'Agence Matrimoniale Premium.\nTon nom est \"Assistant AMC\" (Agence Matrimoniale Cameroun).\nTu réponds UNIQUEMENT en français.\nTu es chaleureux, professionnel et bienveillant.\nTu aides les clients à trouver le partenaire idéal.\n\n[SECTION 1.1 - HUMANISATION ET EMPATHIE]\n- Si le client est FRUSTRÉ ou NÉGATIF : Commence par valider ses sentiments (\"Je comprends parfaitement votre impatience...\"). Sois extrêmement doux.\n- Si le client est ENTHOUSIASTE : Partage sa joie !\n- Si l'urgence est HAUTE : Sois direct et efficace.\n- Ne sois jamais robotique. Utilise des expressions naturelles.\n\n════════════════════════════════════════════════════════════════════════════════\n\n[SECTION 2 - TES OUTILS DISPONIBLES]\n\nTu disposes d'OUTILS puissants :\n\nOUTIL 1 : \"rechercher_profil\"\n   → Utilise cet outil quand le client mentionne un code de profil (MAT-2025-XXX)\n\nOUTIL 2 : \"escalader_vers_admin\"\n   → Utilise cet outil quand le client veut un contact direct, un numéro, ou demande les TARIFS.\n\nOUTIL 3 : \"enregistrer_consultation_profil\"\n   → Utilise cet outil après avoir présenté un profil au client.\n\nOUTIL 4 : \"rechercher_documentation\"\n   → OBLIGATOIRE pour toute question sur le fonctionnement de l'agence, les prix, les conditions, ou des questions générales.\n\n════════════════════════════════════════════════════════════════════════════════\n\n[SECTION 3 - RÈGLES D'ESCALADE OBLIGATOIRES]\n\nTu DOIS escalader SI :\n✓ Demande de NUMÉRO, CONTACT DIRECT ou MISE EN RELATION.\n✓ Questions sur les TARIFS ou COMMENT PAYER.\n✓ Client très MÉCONTENT (utilise l'outil pour qu'un humain reprenne la main).\n\n════════════════════════════════════════════════════════════════════════════════\n\n[SECTION 5 - COMMENT RÉPONDRE AU CLIENT]\n\n- Maximum 3-4 paragraphes.\n- Phrases courtes.\n- 1 à 2 emojis par message.\n- Adaptes ton ton au sentiment détecté.\n\n════════════════════════════════════════════════════════════════════════════════\n\nMAINTENANT, ANALYSE LE MESSAGE ET RÉPONDS AVEC EMPATHIE."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [-8096, -4176],
+      "id": "9925a2e3-dad9-4fab-85df-1ba1d253b215",
+      "name": "16 - AI Agent Orchestrator"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final_response",
+              "name": "final_response",
+              "value": "={{ $json.output || 'Désolé, je n\\'ai pas pu traiter votre message. Veuillez réessayer.' }}",
+              "type": "string"
+            },
+            {
+              "id": "contains_escalation",
+              "name": "contains_escalation",
+              "value": "={{ $json.output.toLowerCase().includes('conseiller') && $json.output.toLowerCase().includes('contacter') }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-7536, -4048],
+      "id": "63ce4256-c43b-4ca0-95c8-0ca45b799cc0",
+      "name": "17 - Traiter Réponse IA"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraction du code profil si présent dans le message original\nconst userMessage = $('9 - Préparer Contexte Lead').first().json.user_message || '';\nconst profileCodeMatch = userMessage.match(/MAT-\\d{4}-\\d{3}/i);\n\n// Détection si escalade a eu lieu\nconst aiResponse = $input.first().json.final_response || '';\nconst containsEscalation = $input.first().json.contains_escalation || false;\n\nreturn [{\n  json: {\n    final_response: aiResponse,\n    profile_code: profileCodeMatch ? profileCodeMatch[0].toUpperCase() : null,\n    conversation_status: containsEscalation ? 'attente_humain' : 'bot_actif',\n    intent: profileCodeMatch ? 'profile_query' : (containsEscalation ? 'escalation' : 'general')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7312, -4048],
+      "id": "7a899799-f8f7-43b3-a14a-6639b655b973",
+      "name": "18 - Extraire Métadonnées"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO conversations (\n  lead_id,\n  direction,\n  content,\n  message_type,\n  sender_type,\n  status,\n  intent,\n  profile_code,\n  created_at\n)\nVALUES (\n  {{ $('9 - Préparer Contexte Lead').first().json.lead_id }},\n  'out',\n  '{{ $json.final_response.replace(/'/g, \"''\").replace(/\\\\/g, \"\\\\\\\\\").replace(/\\n/g, \" \") }}',\n  'text',\n  'bot',\n  '{{ $json.conversation_status }}',\n  '{{ $json.intent }}',\n  {{ $json.profile_code ? \"'\" + $json.profile_code + \"'\" : 'NULL' }},\n  NOW()\n)\nRETURNING id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-7088, -4048],
+      "id": "41b24efb-ab31-490f-8bfd-8b85f51817ae",
+      "name": "19 - Log Message OUT",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-escalation",
+              "leftValue": "={{ $('18 - Extraire Métadonnées').item.json.conversation_status }}",
+              "rightValue": "attente_humain",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-6864, -4048],
+      "id": "1fd86e9d-3009-46e0-8129-0300fd354894",
+      "name": "20 - Mise à jour statut ?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE conversations \nSET status = 'attente_humain' \nWHERE lead_id = {{ $('9 - Préparer Contexte Lead').first().json.lead_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-6640, -4112],
+      "id": "614ba28b-c587-4060-a604-17c2f256e57e",
+      "name": "21 - Update Status Escalade",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "new",
+        "remoteJid": "={{ $('2 - Extract Data').first().json.phone }}",
+        "messageText": "={{ $('18 - Extraire Métadonnées').item.json.final_response }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api-en.evolutionApi",
+      "typeVersion": 1,
+      "position": [-6400, -3968],
+      "id": "daed22a1-99f7-41f4-a570-e3b68f571790",
+      "name": "22 - Send WhatsApp Message",
+      "credentials": {
+        "evolutionApi": {
+          "id": "V1jMvwrsC7FPvBug",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE leads\nSET \n  status = CASE \n    WHEN status = 'nouveau_lead' THEN 'prospect_actif'\n    WHEN status = 'prospect_anonyme' THEN 'prospect_actif'\n    ELSE status\n  END,\n  updated_at = NOW()\nWHERE id = {{ $('9 - Préparer Contexte Lead').first().json.lead_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-6192, -4048],
+      "id": "37c89105-f983-40bf-be31-62ad67165833",
+      "name": "23 - Update Lead Status",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-5968, -4048],
+      "id": "62761804-12c6-4589-b7fa-cb50f8692349",
+      "name": "FIN - Message Envoyé ✅"
+    },
+    {
+      "parameters": {
+        "model": "mistral-large-latest",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [-8400, -4500],
+      "id": "sentiment-llm-id",
+      "name": "Mistral Sentiment LLM",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Tu es un expert en analyse psychologique pour une agence matrimoniale.\n\nAnalyse le message : \"{{ $json.user_message }}\"\n\nRéponds UNIQUEMENT un JSON :\n{\n  \"sentiment\": \"tres_positif\"|\"neutre\"|\"negatif\"|\"frustre\"|\"agressif\",\n  \"urgency\": \"basse\"|\"moyenne\"|\"haute\",\n  \"decision\": \"repondre_vite\"|\"verifier_prudemment\",\n  \"ton_suggeré\": \"empathique\"|\"enthousiaste\"|\"professionnel\",\n  \"est_salutation_simple\": boolean\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [-8150, -4500],
+      "id": "sentiment-analyst-id",
+      "name": "Sentiment Analyst Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $node[\"15 - Préparer Contexte Complet\"].json;\nconst leadContext = $node[\"9 - Préparer Contexte Lead\"].json;\nconst message = leadContext?.user_message || '';\nconst sentimentNode = $node[\"Sentiment Analyst Agent\"];\nconst sentimentRaw = sentimentNode?.json?.text || '{}';\n\ntry {\n  const cleanJson = sentimentRaw.replace(/```json\\n?|\\n?```/g, '').trim();\n  const analysis = JSON.parse(cleanJson);\n  return [{\n    json: {\n      ...context,\n      user_message: message,\n      analysis\n    }\n  }];\n} catch (e) {\n  console.error('Error parsing sentiment JSON:', e.message);\n  return [{\n    json: {\n      ...context,\n      user_message: message,\n      analysis: {\n        sentiment: 'neutre',\n        urgency: 'basse',\n        decision: 'repondre_vite',\n        ton_suggeré: 'professionnel'\n      }\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-7900, -4300],
+      "id": "merge-sentiment-id",
+      "name": "Merge Context & Sentiment"
+    },
+    {
+      "parameters": {
+        "model": "mistral-embed"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [-7400, -3200],
+      "id": "mistral-embeddings-id",
+      "name": "Mistral Cloud Embeddings",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "oTAUAlLG4h6S0uVq",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": "knowledge_base",
+        "description": "Indispensable pour répondre aux questions sur les tarifs, le fonctionnement, les règles de l'agence, et les informations générales (FAQ/RAG).",
+        "queryName": "content"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1,
+      "position": [-7300, -3600],
+      "id": "kb-tool-id",
+      "name": "Tool - Recherche Documentation"
+    },
+    {
+      "parameters": {
+        "tableName": "knowledge_base",
+        "embeddingPropertyName": "embedding"
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePostgres",
+      "typeVersion": 1,
+      "position": [-7150, -3300],
+      "id": "kb-vstore-id",
+      "name": "Postgres Vector Store",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "memoryKey": "chat_history",
+        "returnMessages": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryVectorStore",
+      "typeVersion": 1,
+      "position": [-7900, -3900],
+      "id": "vector-memory-id",
+      "name": "Vector Store Memory"
+    },
+    {
+      "parameters": {
+        "tableName": "conversation_memory",
+        "embeddingPropertyName": "embedding"
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePostgres",
+      "typeVersion": 1,
+      "position": [-7900, -3700],
+      "id": "memory-vstore-id",
+      "name": "Postgres Vector Store Memory",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": "profiles",
+        "description": "Recherche sémantique de profils par description (ex: 'femme entrepreneuse douce'). Retourne les codes des profils les plus proches.",
+        "queryName": "code"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1,
+      "position": [-7300, -3800],
+      "id": "profiles-tool-id",
+      "name": "Tool - Recherche Profils Compatibles"
+    },
+    {
+      "parameters": {
+        "tableName": "profiles",
+        "embeddingPropertyName": "embedding"
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePostgres",
+      "typeVersion": 1,
+      "position": [-7150, -3500],
+      "id": "profiles-vstore-id",
+      "name": "Postgres Vector Store Profiles",
+      "credentials": {
+        "postgres": {
+          "id": "Gv2oFLeW3VbnJ0xx",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "1 - Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "2 - Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Extract Data": {
+      "main": [
+        [
+          {
+            "node": "3 - Message entrant valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 - Message entrant valide ?": {
+      "main": [
+        [
+          {
+            "node": "4 - Get Admin Phone",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FIN - Message ignoré",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - Get Admin Phone": {
+      "main": [
+        [
+          {
+            "node": "5 - Pas l'admin ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 - Pas l'admin ?": {
+      "main": [
+        [
+          {
+            "node": "6 - Get Lead by Phone",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FIN - Message admin (ignoré)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6 - Get Lead by Phone": {
+      "main": [
+        [
+          {
+            "node": "7 - Lead existe ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Lead existe ?": {
+      "main": [
+        [
+          {
+            "node": "9 - Préparer Contexte Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "8 - Créer Lead Anonyme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 - Créer Lead Anonyme": {
+      "main": [
+        [
+          {
+            "node": "9 - Préparer Contexte Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9 - Préparer Contexte Lead": {
+      "main": [
+        [
+          {
+            "node": "10 - Log Message IN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Log Message IN": {
+      "main": [
+        [
+          {
+            "node": "11 - Get Conversation Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - Get Conversation Status": {
+      "main": [
+        [
+          {
+            "node": "12 - Bot peut répondre ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 - Bot peut répondre ?": {
+      "main": [
+        [
+          {
+            "node": "13 - Get Conversation History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FIN - Attente humain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Get Conversation History": {
+      "main": [
+        [
+          {
+            "node": "14 - Get Active Profiles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 - Get Active Profiles": {
+      "main": [
+        [
+          {
+            "node": "15 - Préparer Contexte Complet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 - Préparer Contexte Complet": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analyst Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Sentiment LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analyst Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analyst Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge Context & Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Context & Sentiment": {
+      "main": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool - Rechercher Profil": {
+      "ai_tool": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool - Escalader vers Admin": {
+      "ai_tool": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool - Enregistrer Consultation": {
+      "ai_tool": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool - Recherche Documentation": {
+      "ai_tool": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Postgres Vector Store Profiles",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Postgres Vector Store Memory",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Vector Store Profiles": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Tool - Recherche Profils Compatibles",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool - Recherche Profils Compatibles": {
+      "ai_tool": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Vector Store Memory": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Memory",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "16 - AI Agent Orchestrator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Tool - Recherche Documentation",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 - AI Agent Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "17 - Traiter Réponse IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 - Traiter Réponse IA": {
+      "main": [
+        [
+          {
+            "node": "18 - Extraire Métadonnées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 - Extraire Métadonnées": {
+      "main": [
+        [
+          {
+            "node": "19 - Log Message OUT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 - Log Message OUT": {
+      "main": [
+        [
+          {
+            "node": "20 - Mise à jour statut ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 - Mise à jour statut ?": {
+      "main": [
+        [
+          {
+            "node": "21 - Update Status Escalade",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 - Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "21 - Update Status Escalade": {
+      "main": [
+        [
+          {
+            "node": "22 - Send WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 - Send WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "23 - Update Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 - Update Lead Status": {
+      "main": [
+        [
+          {
+            "node": "FIN - Message Envoyé ✅",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "1 - Webhook WhatsApp": [
+      {
+        "headers": {
+          "host": "n8n.home.local",
+          "user-agent": "axios/1.13.2",
+          "content-length": "1271",
+          "accept": "application/json, text/plain, */*",
+          "accept-encoding": "gzip, compress, deflate, br",
+          "content-type": "application/json",
+          "x-forwarded-for": "10.0.2.1",
+          "x-forwarded-host": "n8n.home.local",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "1fdbfdec74cd",
+          "x-real-ip": "10.0.2.1"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "event": "messages.upsert",
+          "instance": "new",
+          "data": {
+            "key": {
+              "remoteJid": "237692676035@s.whatsapp.net",
+              "remoteJidAlt": "237692676035@s.whatsapp.net",
+              "fromMe": false,
+              "id": "A5ED35A31C9971924657E3C447A7AFAE",
+              "participant": "",
+              "addressingMode": "lid"
+            },
+            "pushName": "drop in drop",
+            "status": "DELIVERY_ACK",
+            "message": {
+              "conversation": "Bonjour",
+              "messageContextInfo": {
+                "threadId": [],
+                "deviceListMetadata": {
+                  "senderKeyIndexes": [],
+                  "recipientKeyIndexes": [],
+                  "recipientKeyHash": {
+                    "0": 239,
+                    "1": 94,
+                    "2": 120,
+                    "3": 156,
+                    "4": 237,
+                    "5": 247,
+                    "6": 36,
+                    "7": 213,
+                    "8": 201,
+                    "9": 18
+                  },
+                  "recipientTimestamp": {
+                    "low": 1769884128,
+                    "high": 0,
+                    "unsigned": true
+                  }
+                },
+                "deviceListMetadataVersion": 2,
+                "messageSecret": {
+                  "0": 118,
+                  "1": 188,
+                  "2": 224,
+                  "3": 66,
+                  "4": 180,
+                  "5": 83,
+                  "6": 246,
+                  "7": 91,
+                  "8": 150,
+                  "9": 103,
+                  "10": 80,
+                  "11": 245,
+                  "12": 116,
+                  "13": 107,
+                  "14": 246,
+                  "15": 31,
+                  "16": 25,
+                  "17": 98,
+                  "18": 224,
+                  "19": 103,
+                  "20": 58,
+                  "21": 172,
+                  "22": 8,
+                  "23": 132,
+                  "24": 187,
+                  "25": 105,
+                  "26": 235,
+                  "27": 145,
+                  "28": 226,
+                  "29": 34,
+                  "30": 79,
+                  "31": 255
+                }
+              }
+            },
+            "messageType": "conversation",
+            "messageTimestamp": 1769986266,
+            "instanceId": "e4a23a99-8647-486b-a07e-b16032e32323",
+            "source": "android"
+          },
+          "destination": "https://n8n.home.local/webhook/whatsapp-messages",
+          "date_time": "2026-02-01T19:51:06.551Z",
+          "sender": "237620124019@s.whatsapp.net",
+          "server_url": "http://evo.home.local",
+          "apikey": "78863B5BD065-4A82-8A2A-1DE87A656346"
+        },
+        "webhookUrl": "https://n8n.home.local/webhook/whatsapp-messages",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "52f86ab16199129cc9f17f47caf79594a565b44b7f742ae7b5f8b1862d8953cd"
+  }
+}
