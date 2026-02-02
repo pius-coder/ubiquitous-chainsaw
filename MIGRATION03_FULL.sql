@@ -683,8 +683,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_last_profile ON leads(last_profile_viewed);
 CREATE INDEX IF NOT EXISTS idx_conversations_recent ON conversations(lead_id, created_at DESC);
 
 -- Index pour le cache de recherche
-CREATE INDEX IF NOT EXISTS idx_search_cache_active ON search_cache(query_hash) 
-    WHERE expires_at > NOW();
+CREATE INDEX IF NOT EXISTS idx_search_cache_active ON search_cache(query_hash);
 
 -- Index GIN pour les recherches JSONB
 CREATE INDEX IF NOT EXISTS idx_tool_calls_input ON tool_calls USING GIN(tool_input);
@@ -786,3 +785,4 @@ SELECT
     SUM(CASE WHEN qualification_score > 0 THEN 1 ELSE 0 END) as with_score,
     AVG(qualification_score) as avg_score
 FROM leads;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS text TEXT;
